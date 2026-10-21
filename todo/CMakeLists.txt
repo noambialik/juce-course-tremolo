@@ -10,7 +10,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0141        NEW      CACHE STRING "" FORCE)
 
 # Sets the minimum deployment target
 # macOS 10.11 is the minimum required by JUCE
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11" CACHE STRING "" FORCE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "" FORCE)
 # Builds a binary that works on Apple Silicon (arm64) and Intel-based Macs
 set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
 
@@ -61,19 +61,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 # Adds a plugin target.
-set(TREMOLO_PLUGIN_NAME "TODO: set your plugin name")
+set(TREMOLO_PLUGIN_NAME "Tremolo")
 juce_add_plugin(
   TremoloCoursePlugin
   PRODUCT_NAME
     ${TREMOLO_PLUGIN_NAME}
   VERSION
-    # TODO: add version
+    0.0.0 # 0 forces AU hosts to always refresh
   COMPANY_NAME
-    # TODO: add company
+    "WolfSound"
   PLUGIN_MANUFACTURER_CODE
-    # TODO: add plugin manufacturer code
+    Wfsd
   PLUGIN_CODE
-    # TODO: add plugin code
+    Trcp
   FORMATS
     Standalone
     AU
