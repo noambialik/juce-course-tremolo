@@ -16,6 +16,7 @@ constexpr float minGain = 0.6f;
 constexpr float maxGain = 1.4f;
 constexpr float epsilon = 1e-7f;
 using TremoloAudioTest = testing::TestWithParam<Tremolo::LfoWaveform>;
+enum class RenderMode { fixed, transition };
 
 void openWav(const juce::File& file,
              std::unique_ptr<juce::AudioFormatReader>& reader) {
@@ -26,12 +27,15 @@ void openWav(const juce::File& file,
   ASSERT_NE(reader, nullptr) << "Cannot decode WAV: " << file.getFullPathName();
 }
 
-void prepareOutputFile(Tremolo::LfoWaveform waveform, juce::File& output) {
+void prepareOutputFile(Tremolo::LfoWaveform waveform, RenderMode mode,
+                       juce::File& output) {
   const juce::File directory{getFileOutputPath("rendered")};
   ASSERT_TRUE(directory.createDirectory().wasOk());
-  const auto outFileName = waveform == Tremolo::LfoWaveform::sine
-                              ? "sine.wav"
-                              : "triangle.wav";
+  const auto startsWithSine = waveform == Tremolo::LfoWaveform::sine;
+  const char* outFileName = startsWithSine ? "sine.wav" : "triangle.wav";
+  if (mode == RenderMode::transition) {
+    outFileName = startsWithSine ? "sine_to_triangle.wav" : "triangle_to_sine.wav";
+  }
   output = directory.getChildFile(outFileName);
 }
 
@@ -70,7 +74,7 @@ void validateProcessedBlock(const juce::AudioBuffer<float>& dry,
 
 void processWav(juce::AudioFormatReader& reader,
                 juce::AudioFormatWriter& writer,
-                Tremolo::LfoWaveform waveform) {
+                Tremolo::LfoWaveform waveform, RenderMode mode) {
   Tremolo effect;
   effect.prepare(reader.sampleRate, blockSize);
   effect.setModulationRateHz(5.f, ApplySmoothing::no);
@@ -79,10 +83,21 @@ void processWav(juce::AudioFormatReader& reader,
   juce::AudioBuffer<float> dry{channels, blockSize};
   auto inputHasSignal = false;
   auto outputHasSignal = false;
-  for (juce::int64 offset = 0; offset < reader.lengthInSamples;
-       offset += blockSize) {
-    const auto frames = static_cast<int>(std::min<juce::int64>(
-        blockSize, reader.lengthInSamples - offset));
+  const auto switchFrame = reader.lengthInSamples / 2;
+  for (juce::int64 offset = 0; offset < reader.lengthInSamples;) {
+    if (mode == RenderMode::transition && offset == switchFrame) {
+      const auto target = waveform == Tremolo::LfoWaveform::sine
+                              ? Tremolo::LfoWaveform::triangle
+                              : Tremolo::LfoWaveform::sine;
+      effect.setLfoWaveform(target);
+    }
+    auto framesRemaining = reader.lengthInSamples - offset;
+    if (mode == RenderMode::transition && offset < switchFrame) {
+      // End this block exactly at the switch, even inside a 512-frame block.
+      framesRemaining = std::min(framesRemaining, switchFrame - offset);
+    }
+    const auto frames = static_cast<int>(
+        std::min<juce::int64>(blockSize, framesRemaining));
     dry.setSize(channels, frames);
     ASSERT_TRUE(reader.read(&dry, 0, frames, offset, true, true))
         << "WAV read failed at frame " << offset;
@@ -92,6 +107,7 @@ void processWav(juce::AudioFormatReader& reader,
         validateProcessedBlock(dry, wet, inputHasSignal, outputHasSignal));
     ASSERT_TRUE(writer.writeFromAudioSampleBuffer(wet, 0, frames))
         << "WAV write failed at frame " << offset;
+    offset += frames;
   }
   ASSERT_EQ(inputHasSignal, outputHasSignal);
 }
@@ -106,7 +122,7 @@ void verifyRenderedWav(const juce::File& output,
   EXPECT_TRUE(rendered->usesFloatingPointData);
 }
 
-TEST_P(TremoloAudioTest, RendersInputWav) {
+void renderInputWav(Tremolo::LfoWaveform waveform, RenderMode mode) {
   if (juce::String{test::inputWavPath}.isEmpty()) {
     GTEST_SKIP() << "Configure with -DTREMOLO_TEST_INPUT_WAV=/absolute/path/input.wav";
   }
@@ -116,20 +132,32 @@ TEST_P(TremoloAudioTest, RendersInputWav) {
   ASSERT_NO_FATAL_FAILURE(openWav(input, reader));
   ASSERT_TRUE(reader->numChannels == 1 || reader->numChannels == 2)
       << "Use a mono or stereo WAV.";
+  if (mode == RenderMode::transition) {
+    ASSERT_GE(reader->lengthInSamples, 2)
+        << "A transition render needs at least two frames.";
+  }
 
   juce::File output;
-  ASSERT_NO_FATAL_FAILURE(prepareOutputFile(GetParam(), output));
+  ASSERT_NO_FATAL_FAILURE(prepareOutputFile(waveform, mode, output));
   // Commit the finished render only after all processing and writes succeed.
   juce::TemporaryFile temporary{output};
   std::unique_ptr<juce::AudioFormatWriter> writer;
   ASSERT_NO_FATAL_FAILURE(createWavWriter(temporary.getFile(), *reader, writer));
-  ASSERT_NO_FATAL_FAILURE(processWav(*reader, *writer, GetParam()));
+  ASSERT_NO_FATAL_FAILURE(processWav(*reader, *writer, waveform, mode));
   ASSERT_TRUE(writer->flush()) << "Cannot flush output WAV.";
   writer.reset();
   ASSERT_TRUE(temporary.overwriteTargetFileWithTemporary());
 
   ASSERT_NO_FATAL_FAILURE(verifyRenderedWav(output, *reader));
   std::cout << "Rendered 5 Hz tremolo: " << output.getFullPathName() << '\n';
+}
+
+TEST_P(TremoloAudioTest, RendersInputWav) {
+  ASSERT_NO_FATAL_FAILURE(renderInputWav(GetParam(), RenderMode::fixed));
+}
+
+TEST_P(TremoloAudioTest, RendersInputWavWithLfoTransition) {
+  ASSERT_NO_FATAL_FAILURE(renderInputWav(GetParam(), RenderMode::transition));
 }
 
 INSTANTIATE_TEST_SUITE_P(

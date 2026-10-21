@@ -20,6 +20,12 @@ at its original sample rate and channel count. They render both shapes at 5 Hz:
 
 - `todo/cmake-build-with-tests/test/rendered/sine.wav`
 - `todo/cmake-build-with-tests/test/rendered/triangle.wav`
+- `todo/cmake-build-with-tests/test/rendered/sine_to_triangle.wav`
+- `todo/cmake-build-with-tests/test/rendered/triangle_to_sine.wav`
+
+The transition renders use the same input file and switch shapes exactly halfway
+through it, with the engine's 25 ms smoothing enabled. They need at least two
+input frames. For the 3-second 440 Hz test tone, the switch occurs at 1.5 seconds.
 
 Outputs are 32-bit float WAVs and are replaced on successful subsequent runs.
 They preserve peaks above 1.0 without normalization or integer clipping. Start
@@ -44,8 +50,9 @@ cmake --build --preset default-with-tests --target TremoloCoursePluginTest
 ctest --preset default-with-tests
 ```
 
-The two personal-file cases are explicitly skipped when no WAV is configured.
-The project's pre-existing tests still run. The file tests check finite samples,
+The four personal-file cases are explicitly skipped when no WAV is configured.
+Generated-LFO tests in `TremoloTest.cpp` are excluded from the test target; the
+remaining processor and bypass tests still run. The file tests check finite samples,
 gain bounds, preservation of signal, and saved WAV sample rate, channels, and
 frame count.
 

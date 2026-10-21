@@ -1067,7 +1067,7 @@ The Debug plugin artifacts are under `todo/cmake-build-with-tests/TremoloCourseP
 | Identical left/right input | Identical modulation on both channels |
 | Save and reopen a project, if Part E is complete | All three controls return to their saved values |
 
-The existing bypass tests contain numerical assertions for gain ramps, cross-block continuation, reversal, and forced bypass. `TremoloTest.cpp` exports waveform WAVs; it does not numerically prove that the shapes or transitions are correct. Inspect `sineLfo.wav`, `triangleLfo.wav`, and `smoothedLfo.wav` beside the test executable, normally in `todo/cmake-build-with-tests/test/`. They contain `0.4 × LFO`, because the test feeds ones and subtracts one from the output.
+The existing bypass tests contain numerical assertions for gain ramps, cross-block continuation, reversal, and forced bypass. The active tremolo audio tests use your configured input WAV and export fixed-shape and transition renders. See the [audio-file test workflow](AUDIO_FILE_TESTING.md) for their locations. The older generated-LFO export tests in `TremoloTest.cpp` remain as reference source and are excluded from the test target.
 
 `PluginProcessorTest.cpp` only verifies construction. It does not validate callback ordering. For stronger verification, add numerical checks for unity-input output between 0.6 and 1.4, identical stereo modulation, continuity across blocks, and processing of the initial bypass-entry block.
 
