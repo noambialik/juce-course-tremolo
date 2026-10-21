@@ -1,5 +1,14 @@
 project(TremoloCoursePluginTest)
 
+set(TREMOLO_TEST_INPUT_WAV "" CACHE FILEPATH "Optional mono/stereo WAV to render through the tremolo tests")
+if(TREMOLO_TEST_INPUT_WAV)
+  get_filename_component(TREMOLO_TEST_INPUT_WAV "${TREMOLO_TEST_INPUT_WAV}" ABSOLUTE BASE_DIR "${CMAKE_SOURCE_DIR}")
+  if(NOT EXISTS "${TREMOLO_TEST_INPUT_WAV}" OR IS_DIRECTORY "${TREMOLO_TEST_INPUT_WAV}")
+    message(FATAL_ERROR "TREMOLO_TEST_INPUT_WAV must name an existing WAV file: ${TREMOLO_TEST_INPUT_WAV}")
+  endif()
+endif()
+configure_file(AudioTestConfig.h.in generated/AudioTestConfig.h @ONLY)
+
 # Signals to CMake that we want to run tests from this directory.
 enable_testing()
 
@@ -37,7 +46,10 @@ add_executable(TremoloCoursePluginTest
   source/PluginProcessorTest.cpp
   # source/JsonSerializerTest.cpp
   source/TremoloTest.cpp
+  source/TremoloAudioTest.cpp
 )
+
+target_include_directories(TremoloCoursePluginTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 # Configuration options that apply to the JUCE sources in the test target
 target_compile_definitions(TremoloCoursePluginTest

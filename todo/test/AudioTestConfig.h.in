@@ -1,0 +1,5 @@
+#pragma once
+
+namespace tremolo::test {
+inline constexpr auto inputWavPath = R"wav(@TREMOLO_TEST_INPUT_WAV@)wav";
+}

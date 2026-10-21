@@ -356,6 +356,8 @@ Replace only those lines with:
 
 **Checkpoint A:** The existing processor already calls the engine's `prepare()`, `process()`, and `reset()`. You now have a fixed-rate 5 Hz tremolo. Build the basic plugin with `cd todo`, `cmake --preset default`, then `cmake --build --preset default`. Steps 5–9 temporarily reference methods that are added later, so build after completing this part, rather than after every insertion.
 
+To listen using your own WAV without a DAW or microphone, follow the [audio-file test workflow](AUDIO_FILE_TESTING.md). It runs through the existing test target and saves sine/triangle renders for playback.
+
 ## Part B — Let the host control the sound
 
 ### Step 15: Store references to the three parameters
